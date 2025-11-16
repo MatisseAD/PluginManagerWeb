@@ -1,45 +1,67 @@
+
 plugins {
     id 'java'
-    // Shadow plugin can be used to build a fat jar if needed later
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 group = 'fr.matissead'
-version = '0.1.0-SNAPSHOT'
+version = '1.0.0'
+sourceCompatibility = '17'
+targetCompatibility = '17'
 
 repositories {
-    // Central repositories for dependencies
     mavenCentral()
-    // Paper Maven repo for Paper-API
     maven {
-        url = 'https://papermc.io/repo/repository/maven-public/'
+        name = 'spigotmc-repo'
+        url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
     }
-    // JitPack for Javalin
     maven {
-        url = 'https://jitpack.io'
+        name = 'sonatype'
+        url = 'https://oss.sonatype.org/content/groups/public/'
     }
 }
 
 dependencies {
-    // Paper API for plugin development (provided at runtime)
-    compileOnly 'io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT'
-    // Javalin for embedded web server
-    implementation 'io.javalin:javalin:5.6.2'
-    // Logging API – SLF4J
-    implementation 'org.slf4j:slf4j-simple:2.0.11'
+    // Spigot API
+    compileOnly 'org.spigotmc:spigot-api:1.20.1-R0.1-SNAPSHOT'
+
+    // Logging
+    implementation 'org.slf4j:slf4j-api:2.0.9'
+    implementation 'org.slf4j:slf4j-simple:2.0.9'
+
+    // Web Server
+    implementation 'io.javalin:javalin:5.6.3'
+
+    // JSON (optional – only if you use it directly)
+    implementation 'com.google.code.gson:gson:2.10.1'
+
+    // Jackson Java Time module (for Instant, LocalDateTime, etc.)
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
+
+    // Database
+    implementation 'com.zaxxer:HikariCP:5.0.1'
+    implementation 'org.xerial:sqlite-jdbc:3.43.0.0'
+
+    // HTTP Client
+    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
 }
 
-// Task to create plugin jar with dependencies (shadowJar) for distribution
-tasks.named('shadowJar') {
+shadowJar {
     archiveClassifier.set('')
-    relocate 'io.javalin', 'fr.matissead.pluginmanagerweb.lib.javalin'
+    
+    // Relocate dependencies to avoid conflicts
+    relocate 'org.slf4j', 'fr.matissead.pluginmanagerweb.libs.slf4j'
+    relocate 'io.javalin', 'fr.matissead.pluginmanagerweb.libs.javalin'
+    relocate 'com.google.gson', 'fr.matissead.pluginmanagerweb.libs.gson'
+    relocate 'com.zaxxer.hikari', 'fr.matissead.pluginmanagerweb.libs.hikari'
+    relocate 'okhttp3', 'fr.matissead.pluginmanagerweb.libs.okhttp'
 }
 
-// Ensure the jar is built when running the build task
-tasks.build.dependsOn tasks.shadowJar
+build {
+    dependsOn shadowJar
+}

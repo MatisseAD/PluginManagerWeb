@@ -1,51 +1,326 @@
-# PluginManagerWeb
+# 🔌 PluginManagerWeb
 
-PluginManagerWeb est un plugin Minecraft (Paper 1.20+) optionnel qui centralise le management et la supervision des plugins développés par **MatisseAD**. À la manière du web editor de LuckPerms, il expose un tableau de bord web embarqué permettant :
+**PluginManagerWeb** is a powerful web-based management panel for Minecraft (Paper 1.20+) servers. Inspired by LuckPerms' web editor, it provides a modern, feature-rich dashboard for managing plugins, viewing metrics, editing configurations, and monitoring your server.
 
-* la découverte et l’inventaire des plugins installés ;
-* la collecte de statistiques (uptime, consommation mémoire, compteurs personnalisables) ;
-* l’affichage et l’installation de nouvelles versions disponibles sur GitHub ;
-* l’édition en ligne des fichiers de configuration ;
-* l’exécution d’actions à chaud comme reload/enable/disable ;
-* l’accès via une API REST et WebSocket pour l’intégration avec des outils externes.
+## ✨ Features
 
-## Fonctionnement
+### 🎮 Plugin Management
+- **Real-time plugin overview** - View all installed plugins with their status, version, and authors
+- **Enable/Disable/Reload** - Control plugins directly from the web interface
+- **Plugin details** - Access comprehensive information about each plugin
+- **Action audit logging** - Track all administrative actions for security and compliance
 
-Le plugin démarre un serveur HTTP(S) embarqué grâce à **Javalin** lors de l’initialisation du serveur Minecraft. Un tableau de bord accessible via un navigateur permet aux administrateurs de surveiller l’état des différents plugins, de consulter les métriques et d’effectuer des actions. Toutes les actions sensibles sont contrôlées par un système d’authentification à jeton et, si disponible, une intégration avec LuckPerms.
+### 📦 GitHub Integration
+- **Release tracking** - Automatically fetch releases from configured GitHub repositories
+- **Version comparison** - See available updates for your plugins
+- **One-click updates** - Download and install plugin updates directly from GitHub
+- **Release notes** - View changelogs and release information
 
-Les dépendances principales sont la Paper API (version 1.20.4 ou supérieure) et Javalin pour le serveur web. Le build est configuré avec Gradle et la tâche `shadowJar` génère un jar autonome comprenant les dépendances nécessaires.
+### ⚙️ Configuration Management
+- **File browser** - Navigate and view plugin configuration files
+- **Online editor** - Edit config files directly in the browser
+- **Automatic backups** - Every config change is backed up automatically
+- **Rollback support** - Restore previous configurations with one click
+- **Safe editing** - Path validation prevents access outside plugin directories
 
-## Installation
+### 📊 Metrics & Monitoring
+- **Server statistics** - CPU, memory, TPS, and player count
+- **Plugin metrics** - Custom metrics reported by plugins
+- **Aggregated views** - Overview of top plugins by usage
+- **Public API** - Other plugins can report custom metrics
 
-1. Compilez le projet avec `./gradlew shadowJar` pour obtenir un jar dans `build/libs/`.
-2. Placez le jar `PluginManagerWeb.jar` dans le dossier `plugins` de votre serveur Paper.
-3. Démarrez votre serveur Minecraft. Un fichier `config.yml` sera généré si absent ; ajustez les paramètres selon votre environnement (port web, jeton d’authentification, référentiels GitHub).
-4. Accédez à l’URL indiquée dans la console (par défaut `http://<adresse IP>:8080/`) et utilisez le jeton d’authentification pour vous connecter.
+### 🔒 Security
+- **Token-based authentication** - Secure API access with admin tokens
+- **IP whitelisting** - Restrict access to specific IP addresses
+- **Audit logging** - All sensitive actions are logged with user, IP, and timestamp
+- **Role-based access** - Future support for LuckPerms group integration
 
-## Configuration
+### 🌐 Modern Web Interface
+- **Dark theme** - Beautiful, modern design optimized for readability
+- **Responsive layout** - Works on desktop, tablet, and mobile devices
+- **Real-time updates** - WebSocket connection for live server events
+- **Intuitive navigation** - Easy-to-use sidebar and tab-based interface
 
-Le fichier `config.yml` contient toutes les options permettant de personnaliser le comportement du plugin : activation/désactivation du serveur web, port d’écoute, activation du TLS, liste blanche IP, jeton API, référentiels GitHub surveillés, options de base de données, etc. Un exemple complet de configuration se trouve dans `src/main/resources/config.yml`.
+## 📋 Requirements
 
-## Structure du projet
+- **Minecraft Server**: Paper 1.20.4 or higher (Spigot may work but not officially supported)
+- **Java**: Java 17 or higher
+- **Memory**: Minimal overhead (~20MB)
 
-- `src/main/java/fr/matissead/pluginmanagerweb/PluginManagerWeb.java` : classe principale qui initialise le plugin et démarre le serveur web.
-- `src/main/java/fr/matissead/pluginmanagerweb/WebServer.java` : wrapper autour de Javalin pour démarrer, arrêter et configurer le serveur.
-- `src/main/resources/plugin.yml` : définition Bukkit/Paper du plugin.
-- `src/main/resources/config.yml` : configuration par défaut.
-- `build.gradle` : script Gradle pour la compilation et la génération du jar.
+## 🚀 Installation
 
-## Exemple d’utilisation
+1. **Download** the latest release from the [Releases page](https://github.com/MatisseAD/PluginManagerWeb/releases)
 
-Après installation, connectez-vous au tableau de bord et vous verrez la liste des plugins installés avec leur version et leur état. Vous pourrez :
+2. **Place** the JAR file in your server's `plugins/` directory
 
-* consulter des statistiques d’utilisation (par exemple, nombre de commandes exécutées pour ReanimateMC) ;
-* visualiser les releases disponibles sur GitHub et déclencher une mise à jour ;
-* éditer la configuration d’un plugin directement dans le navigateur et sauvegarder vos modifications ;
-* exécuter des commandes de maintenance (reload, enable, disable) ;
-* recevoir des notifications en temps réel via WebSocket lorsqu’un plugin change d’état ou qu’une nouvelle version est publiée.
+3. **Start** your Minecraft server
 
-## Avertissements
+4. **Configure** the plugin by editing `plugins/PluginManagerWeb/config.yml`
 
-Ce projet est un squelette de départ. De nombreuses fonctionnalités (collecte fine de métriques, gestion avancée des erreurs, protection contre l’exécution arbitraire de code lors des mises à jour, etc.) restent à implémenter. Le choix du framework web (ici Javalin) et de la version cible de Paper (1.20+) sont des recommandations susceptibles d’évoluer.
+5. **Restart** the server to apply configuration changes
 
-Pour toute contribution ou suggestion, n’hésitez pas à ouvrir une *issue* ou une *pull request*.
+## ⚙️ Configuration
+
+Edit `plugins/PluginManagerWeb/config.yml`:
+
+```yaml
+pluginmanager:
+  enabled: true
+  web:
+    enabled: true
+    port: 8080
+    bind_address: 0.0.0.0
+    tls:
+      enabled: false
+      cert_path: cert.pem
+      key_path: key.pem
+    allowed_ips: [] # Empty = allow all
+  auth:
+    # IMPORTANT: Change this to a secure random token!
+    admin_token: "CHANGE_ME"
+    use_luckperms_groups: false
+  github:
+    token: "" # Optional GitHub personal access token
+    repos:
+      - "MatisseAD/ReanimateMC"
+      - "MatisseAD/EvenMoreItems"
+      - "MatisseAD/CryptocurrencyMC"
+      - "MatisseAD/HammerMC"
+    auto_update: false
+  database:
+    type: sqlite
+    sqlite_path: data/pluginmanager.sqlite
+```
+
+### Configuration Options
+
+#### Web Server
+- `port` - HTTP port (default: 8080)
+- `bind_address` - Interface to bind to (0.0.0.0 = all interfaces)
+- `allowed_ips` - IP whitelist (empty array = allow all)
+- `tls` - HTTPS configuration (requires valid certificates)
+
+#### Authentication
+- `admin_token` - API access token (**MUST BE CHANGED**)
+- `use_luckperms_groups` - Enable LuckPerms integration (coming soon)
+
+#### GitHub Integration
+- `token` - GitHub personal access token (optional, for private repos or higher rate limits)
+- `repos` - List of repositories to track for updates
+- `auto_update` - Automatically download updates (not recommended for production)
+
+#### Database
+- `type` - Database type (currently only `sqlite` is supported)
+- `sqlite_path` - Path to SQLite database file
+
+## 🌐 Accessing the Dashboard
+
+1. Open your browser and navigate to `http://YOUR_SERVER_IP:8080/`
+
+2. Enter your **admin_token** from the configuration
+
+3. Click **Login**
+
+You're now ready to manage your plugins!
+
+## 🔑 API Usage
+
+### Authentication
+
+All API requests (except `/api/health`) require an `Authorization` header:
+
+```bash
+Authorization: Bearer YOUR_ADMIN_TOKEN
+```
+
+### Available Endpoints
+
+#### Server Information
+```http
+GET /api/health              # Health check (no auth required)
+GET /api/server              # Detailed server information
+```
+
+#### Plugin Management
+```http
+GET /api/plugins                      # List all plugins
+GET /api/plugins/{name}               # Get plugin details
+POST /api/plugins/{name}/action       # Enable/disable/reload plugin
+GET /api/plugins/{name}/releases      # Get GitHub releases
+```
+
+#### Configuration
+```http
+GET /api/plugins/{name}/config                 # List config files
+GET /api/plugins/{name}/config/file?path=...   # Get file content
+POST /api/plugins/{name}/config/file           # Save config file
+GET /api/plugins/{name}/config/backups         # List backups
+POST /api/plugins/{name}/config/rollback       # Restore backup
+```
+
+#### Metrics
+```http
+GET /api/plugins/{name}/metrics    # Get plugin metrics
+GET /api/metrics/overview          # Get all metrics overview
+```
+
+### Example: Enable a Plugin
+
+```bash
+curl -X POST http://localhost:8080/api/plugins/MyPlugin/action \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "enable"}'
+```
+
+## 🔌 Plugin Integration
+
+Other plugins can report custom metrics to PluginManagerWeb:
+
+```java
+import fr.matissead.pluginmanagerweb.PluginManagerWeb;
+import fr.matissead.pluginmanagerweb.api.PluginManagerWebAPI;
+import org.bukkit.Bukkit;
+import org.bukkit.plugin.Plugin;
+
+public class MyPlugin extends JavaPlugin {
+    
+    private PluginManagerWebAPI pmwAPI;
+    
+    @Override
+    public void onEnable() {
+        // Get PluginManagerWeb API
+        Plugin pmw = Bukkit.getPluginManager().getPlugin("PluginManagerWeb");
+        if (pmw instanceof PluginManagerWeb) {
+            pmwAPI = ((PluginManagerWeb) pmw).getAPI();
+        }
+    }
+    
+    public void reportMetric() {
+        if (pmwAPI != null) {
+            // Increment a counter
+            pmwAPI.incrementCounter("MyPlugin", "commands_executed", 1);
+            
+            // Record an event
+            Map<String, Object> payload = Map.of(
+                "player", "Steve",
+                "command", "/mycommand"
+            );
+            pmwAPI.recordEvent("MyPlugin", "command_executed", payload);
+            
+            // Set a gauge value
+            pmwAPI.setGauge("MyPlugin", "active_users", 42);
+        }
+    }
+}
+```
+
+## 🏗️ Building from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/MatisseAD/PluginManagerWeb.git
+cd PluginManagerWeb
+
+# Build with Gradle
+./gradlew shadowJar
+
+# The JAR will be in build/libs/PluginManagerWeb.jar
+```
+
+## 📁 Project Structure
+
+```
+src/main/java/fr/matissead/pluginmanagerweb/
+├── api/
+│   ├── controllers/         # REST API controllers
+│   │   ├── ServerController.java
+│   │   ├── PluginController.java
+│   │   ├── ConfigController.java
+│   │   └── MetricsController.java
+│   ├── websocket/           # WebSocket handlers
+│   │   └── EventsWebSocketHandler.java
+│   └── PluginManagerWebAPI.java  # Public API interface
+├── config/                  # Configuration management
+├── github/                  # GitHub API client
+├── metrics/                 # Metrics collection service
+├── model/                   # Data models
+├── persistence/             # Database layer (DAOs)
+├── security/                # Authentication & authorization
+├── PluginManagerWeb.java    # Main plugin class
+└── WebServer.java          # Javalin web server
+
+src/main/resources/
+├── config.yml              # Default configuration
+├── plugin.yml              # Bukkit plugin definition
+└── web/                    # Frontend assets
+    ├── index.html
+    ├── css/style.css
+    └── js/
+        ├── api.js
+        └── app.js
+```
+
+## 🛠️ Technology Stack
+
+- **Backend Framework**: [Javalin](https://javalin.io/) 5.6
+- **Database**: SQLite with [HikariCP](https://github.com/brettwooldridge/HikariCP) connection pooling
+- **HTTP Client**: [OkHttp](https://square.github.io/okhttp/)
+- **JSON**: [Gson](https://github.com/google/gson)
+- **Logging**: SLF4J
+- **Frontend**: Vanilla JavaScript (no frameworks)
+
+## 🔐 Security Considerations
+
+1. **Change the default token** - The `admin_token` must be changed immediately
+2. **Use HTTPS in production** - Configure TLS for encrypted communication
+3. **Restrict IPs** - Use the `allowed_ips` whitelist in production environments
+4. **Secure the port** - Consider using a reverse proxy (nginx, Caddy) with rate limiting
+5. **Regular updates** - Keep the plugin updated for security patches
+
+## 🐛 Troubleshooting
+
+### Web server doesn't start
+- Check if the port is already in use: `netstat -tulpn | grep 8080`
+- Check server logs for error messages
+- Ensure Java 17+ is installed
+
+### Can't access the dashboard
+- Verify the bind_address is correct (use 0.0.0.0 for all interfaces)
+- Check firewall rules allow the port
+- Confirm your IP is in the allowed_ips list (if configured)
+
+### Authentication fails
+- Verify the token matches the one in config.yml
+- Check for extra spaces or quotes in the token
+- Try clearing browser cache/cookies
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- Inspired by [LuckPerms](https://luckperms.net/) web editor
+- Built with [Javalin](https://javalin.io/)
+- Icons from [Emoji](https://emojipedia.org/)
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/MatisseAD/PluginManagerWeb/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/MatisseAD/PluginManagerWeb/discussions)
+- **Website**: [MatisseAD on GitHub](https://github.com/MatisseAD)
+
+---
+
+**Made with ❤️ by MatisseAD & Copilot**

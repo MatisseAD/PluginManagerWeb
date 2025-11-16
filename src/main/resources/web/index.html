@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PluginManagerWeb - Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-container">
+        <div class="login-card">
+            <h1>🔌 PluginManagerWeb</h1>
+            <p>Enter your API token to access the dashboard</p>
+            <input type="password" id="token-input" placeholder="API Token" />
+            <button id="login-btn">Login</button>
+            <div id="login-error" class="error" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" style="display: none;">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1>🔌 PluginManagerWeb</h1>
+                <span id="server-status" class="status-badge">●  Online</span>
+            </div>
+            <div class="header-right">
+                <span id="server-info"></span>
+                <button id="logout-btn" class="btn-secondary">Logout</button>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav>
+                <a href="#" class="nav-item active" data-view="overview">
+                    <span>📊</span> Overview
+                </a>
+                <a href="#" class="nav-item" data-view="plugins">
+                    <span>🔌</span> Plugins
+                </a>
+                <a href="#" class="nav-item" data-view="metrics">
+                    <span>📈</span> Metrics
+                </a>
+                <a href="#" class="nav-item" data-view="logs">
+                    <span>📝</span> Logs
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Overview View -->
+            <div id="view-overview" class="view active">
+                <h2>Dashboard Overview</h2>
+                <div class="cards-grid">
+                    <div class="card">
+                        <h3>Total Plugins</h3>
+                        <div class="stat-value" id="stat-total-plugins">-</div>
+                    </div>
+                    <div class="card">
+                        <h3>Enabled Plugins</h3>
+                        <div class="stat-value" id="stat-enabled-plugins">-</div>
+                    </div>
+                    <div class="card">
+                        <h3>GitHub Tracked</h3>
+                        <div class="stat-value" id="stat-github-plugins">-</div>
+                    </div>
+                    <div class="card">
+                        <h3>Server Uptime</h3>
+                        <div class="stat-value" id="stat-uptime">-</div>
+                    </div>
+                </div>
+                <div id="server-details" class="card mt-20">
+                    <h3>Server Information</h3>
+                    <div id="server-details-content">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Plugins View -->
+            <div id="view-plugins" class="view">
+                <h2>Installed Plugins</h2>
+                <div id="plugins-list" class="plugins-grid">
+                    Loading plugins...
+                </div>
+            </div>
+
+            <!-- Metrics View -->
+            <div id="view-metrics" class="view">
+                <h2>Metrics Overview</h2>
+                <div id="metrics-content">
+                    Loading metrics...
+                </div>
+            </div>
+
+            <!-- Logs View -->
+            <div id="view-logs" class="view">
+                <h2>System Logs</h2>
+                <div class="card">
+                    <div id="logs-content">
+                        <p>Log streaming coming soon...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Plugin Detail Modal -->
+    <div id="plugin-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2 id="modal-plugin-name">Plugin Name</h2>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="overview">Overview</button>
+                <button class="tab-btn" data-tab="versions">Versions</button>
+                <button class="tab-btn" data-tab="config">Config</button>
+                <button class="tab-btn" data-tab="metrics">Metrics</button>
+            </div>
+            <div class="tab-content">
+                <div id="tab-overview" class="tab-pane active">
+                    <div id="plugin-details"></div>
+                </div>
+                <div id="tab-versions" class="tab-pane">
+                    <div id="plugin-versions"></div>
+                </div>
+                <div id="tab-config" class="tab-pane">
+                    <div id="plugin-config"></div>
+                </div>
+                <div id="tab-metrics" class="tab-pane">
+                    <div id="plugin-metrics-detail"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
