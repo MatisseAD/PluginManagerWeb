@@ -1,114 +1,201 @@
 package fr.matissead.pluginmanagerweb;
 
+import com.google.gson.Gson;
+import fr.matissead.pluginmanagerweb.api.controllers.*;
+import fr.matissead.pluginmanagerweb.api.websocket.EventsWebSocketHandler;
+import fr.matissead.pluginmanagerweb.config.PluginManagerConfig;
+import fr.matissead.pluginmanagerweb.github.GitHubClient;
+import fr.matissead.pluginmanagerweb.metrics.PluginMetricsService;
+import fr.matissead.pluginmanagerweb.persistence.AuditLogDao;
+import fr.matissead.pluginmanagerweb.persistence.ConfigBackupDao;
+import fr.matissead.pluginmanagerweb.security.AuthMiddleware;
+import fr.matissead.pluginmanagerweb.security.TokenService;
 import io.javalin.Javalin;
-import io.javalin.http.Context;
-import io.javalin.websocket.WsConfig;
-import io.javalin.websocket.WsConnectContext;
-import org.bukkit.Bukkit;
-import org.bukkit.Server;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.PluginManager;
-import org.bukkit.plugin.java.JavaPlugin;
+import io.javalin.http.staticfiles.Location;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
 
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
- * Wrapper autour de Javalin pour démarrer et arrêter un serveur web embarqué.
- * <p>
- * Ce serveur expose une API REST minimaliste et un endpoint WebSocket. Les routes
- * sont définies dans des méthodes dédiées pour une meilleure lisibilité.
+ * Web server wrapper managing Javalin and all REST/WebSocket routes.
+ * Configures security, static file serving, and exception handling.
  */
 public class WebServer {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private static final Logger logger = LoggerFactory.getLogger(WebServer.class);
     private final PluginManagerWeb plugin;
+    private final PluginManagerConfig config;
     private final Javalin app;
-    private final FileConfiguration config;
+    private final Gson gson;
+    
+    // Controllers
+    private final ServerController serverController;
+    private final PluginController pluginController;
+    private final ConfigController configController;
+    private final MetricsController metricsController;
+    
+    // WebSocket handlers
+    private final EventsWebSocketHandler eventsHandler;
+    
+    // Middleware
+    private final AuthMiddleware authMiddleware;
 
-    public WebServer(PluginManagerWeb plugin, FileConfiguration config) {
+    public WebServer(PluginManagerWeb plugin, PluginManagerConfig config, TokenService tokenService,
+                    PluginMetricsService metricsService, GitHubClient githubClient,
+                    AuditLogDao auditLogDao, ConfigBackupDao configBackupDao) {
         this.plugin = plugin;
         this.config = config;
-        this.app = Javalin.create(config -> {
-            // Activer les CORS si nécessaire en fonction de la configuration
-            config.http.defaultContentType = "application/json";
+        this.gson = new Gson();
+        
+        // Initialize controllers
+        this.serverController = new ServerController();
+        this.pluginController = new PluginController(metricsService, githubClient, 
+                                                      config.getGithubConfig(), auditLogDao);
+        this.configController = new ConfigController(configBackupDao, auditLogDao);
+        this.metricsController = new MetricsController(metricsService);
+        
+        // Initialize WebSocket handlers
+        this.eventsHandler = new EventsWebSocketHandler();
+        
+        // Initialize middleware
+        this.authMiddleware = new AuthMiddleware(tokenService, config.getWebConfig(), auditLogDao);
+        
+        // Create Javalin app
+        this.app = Javalin.create(javalinConfig -> {
+            javalinConfig.http.defaultContentType = "application/json";
+            javalinConfig.http.maxRequestSize = 10_000_000L; // 10MB for config files
+            
+            // Set up static file serving for frontend
+            Path webDir = plugin.getDataFolder().toPath().resolve("web");
+            try {
+                if (!Files.exists(webDir)) {
+                    Files.createDirectories(webDir);
+                    logger.info("Created web directory: {}", webDir);
+                }
+                javalinConfig.staticFiles.add(webDir.toString(), Location.EXTERNAL);
+            } catch (IOException e) {
+                logger.error("Failed to create web directory", e);
+            }
+            
+            // Enable CORS for development
+            javalinConfig.bundledPlugins.enableCors(cors -> {
+                cors.addRule(it -> {
+                    it.anyHost();
+                });
+            });
         });
+        
         registerRoutes();
+        registerExceptionHandlers();
     }
 
-    /**
-     * Démarre le serveur web sur l’adresse et le port définis dans la configuration.
-     */
+    private void registerRoutes() {
+        // Public routes (no authentication required)
+        app.get("/api/health", serverController::health);
+        
+        // Authenticated routes - server info
+        app.get("/api/server", authMiddleware, serverController::serverInfo);
+        
+        // Authenticated routes - plugins
+        app.get("/api/plugins", authMiddleware, pluginController::listPlugins);
+        app.get("/api/plugins/{name}", authMiddleware, pluginController::getPlugin);
+        app.post("/api/plugins/{name}/action", authMiddleware, pluginController::performAction);
+        app.get("/api/plugins/{name}/releases", authMiddleware, pluginController::getReleases);
+        
+        // Authenticated routes - configuration
+        app.get("/api/plugins/{name}/config", authMiddleware, configController::listConfigFiles);
+        app.get("/api/plugins/{name}/config/file", authMiddleware, configController::getConfigFile);
+        app.post("/api/plugins/{name}/config/file", authMiddleware, configController::saveConfigFile);
+        app.get("/api/plugins/{name}/config/backups", authMiddleware, configController::listBackups);
+        app.post("/api/plugins/{name}/config/rollback", authMiddleware, configController::rollbackConfig);
+        
+        // Authenticated routes - metrics
+        app.get("/api/plugins/{name}/metrics", authMiddleware, metricsController::getPluginMetrics);
+        app.get("/api/metrics/overview", authMiddleware, metricsController::getMetricsOverview);
+        
+        // WebSocket - events (consider adding auth here too)
+        app.ws("/ws/events", ws -> {
+            ws.onConnect(eventsHandler::onConnect);
+            ws.onClose(eventsHandler::onClose);
+            ws.onMessage(eventsHandler::onMessage);
+        });
+        
+        // Root route - serve dashboard or redirect to index.html
+        app.get("/", ctx -> {
+            ctx.html("<!DOCTYPE html><html><head><title>PluginManagerWeb</title></head>" +
+                    "<body><h1>PluginManagerWeb</h1><p>Dashboard coming soon! Use the API endpoints for now.</p>" +
+                    "<p>API Health: <a href='/api/health'>/api/health</a></p></body></html>");
+        });
+    }
+
+    private void registerExceptionHandlers() {
+        // Global exception handler
+        app.exception(Exception.class, (e, ctx) -> {
+            logger.error("Unhandled exception in request: {} {}", ctx.method(), ctx.path(), e);
+            ctx.status(500).json(new ErrorResponse(
+                "INTERNAL_SERVER_ERROR",
+                "An internal error occurred: " + e.getMessage()
+            ));
+        });
+        
+        // 404 handler
+        app.error(404, ctx -> {
+            ctx.json(new ErrorResponse(
+                "NOT_FOUND",
+                "The requested endpoint does not exist"
+            ));
+        });
+        
+        // 401 handler
+        app.error(401, ctx -> {
+            ctx.json(new ErrorResponse(
+                "UNAUTHORIZED",
+                "Authentication required"
+            ));
+        });
+    }
+
     public void start() {
-        ConfigurationSection web = config.getConfigurationSection("pluginmanager.web");
-        String host = web.getString("bind_address", "0.0.0.0");
-        int port = web.getInt("port", 8080);
-        app.start(host, port);
+        int port = config.getWebConfig().getPort();
+        String bindAddress = config.getWebConfig().getBindAddress();
+        app.start(bindAddress, port);
+        logger.info("Web server started on {}:{}", bindAddress, port);
     }
 
-    /**
-     * Arrête le serveur web.
-     */
     public void stop() {
         try {
             app.stop();
+            logger.info("Web server stopped");
         } catch (Exception e) {
-            logger.error("Erreur lors de l’arrêt du serveur web", e);
+            logger.error("Error stopping web server", e);
         }
     }
 
-    /**
-     * Enregistre les routes REST et WebSocket. Pour l’instant, seul un endpoint de
-     * démonstration est exposé. Les fonctionnalités complètes devront être
-     * implémentées (liste des plugins, actions d’administration, etc.).
-     */
-    private void registerRoutes() {
-        // Endpoint de santé
-        app.get("/api/health", ctx -> ctx.json(Map.of(
-                "status", "ok",
-                "server", Bukkit.getVersion()
-        )));
-
-        // Endpoint pour lister les plugins installés (squelette)
-        app.get("/api/plugins", this::handleListPlugins);
-
-        // WebSocket pour démonstration (push d’événements)
-        app.ws("/ws/events", ws -> {
-            ws.onConnect(this::handleWsConnect);
-            ws.onClose(ctx -> {
-                // Aucun traitement pour l’instant
-            });
-        });
+    public EventsWebSocketHandler getEventsHandler() {
+        return eventsHandler;
     }
 
     /**
-     * Gère la réponse JSON pour la liste des plugins installés.
-     * <p>
-     * Cette implémentation parcourt les plugins chargés et retourne un tableau
-     * contenant leur nom, leur version et s’ils sont activés.
+     * Simple error response class for JSON serialization.
      */
-    private void handleListPlugins(Context ctx) {
-        PluginManager pluginManager = Bukkit.getPluginManager();
-        List<Map<String, Object>> entries = pluginManager.getPlugins().stream().map(plugin -> Map.of(
-                "name", plugin.getName(),
-                "version", plugin.getDescription().getVersion(),
-                "enabled", plugin.isEnabled(),
-                "authors", plugin.getDescription().getAuthors()
-        )).toList();
-        ctx.json(Map.of(
-                "plugins", entries
-        ));
-    }
+    public static class ErrorResponse {
+        private final String error;
+        private final String message;
 
-    /**
-     * Handler appelé lorsqu’un client se connecte au WebSocket. Dans cette
-     * implémentation de base, un message de bienvenue est envoyé.
-     */
-    private void handleWsConnect(WsConnectContext ctx) {
-        ctx.send("Connecté à PluginManagerWeb.");
+        public ErrorResponse(String error, String message) {
+            this.error = error;
+            this.message = message;
+        }
+
+        public String getError() {
+            return error;
+        }
+
+        public String getMessage() {
+            return message;
+        }
     }
 }
