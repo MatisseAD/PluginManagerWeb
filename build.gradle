@@ -1,0 +1,45 @@
+plugins {
+    id 'java'
+    // Shadow plugin can be used to build a fat jar if needed later
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'fr.matissead'
+version = '0.1.0-SNAPSHOT'
+
+repositories {
+    // Central repositories for dependencies
+    mavenCentral()
+    // Paper Maven repo for Paper-API
+    maven {
+        url = 'https://papermc.io/repo/repository/maven-public/'
+    }
+    // JitPack for Javalin
+    maven {
+        url = 'https://jitpack.io'
+    }
+}
+
+dependencies {
+    // Paper API for plugin development (provided at runtime)
+    compileOnly 'io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT'
+    // Javalin for embedded web server
+    implementation 'io.javalin:javalin:5.6.2'
+    // Logging API – SLF4J
+    implementation 'org.slf4j:slf4j-simple:2.0.11'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+// Task to create plugin jar with dependencies (shadowJar) for distribution
+tasks.named('shadowJar') {
+    archiveClassifier.set('')
+    relocate 'io.javalin', 'fr.matissead.pluginmanagerweb.lib.javalin'
+}
+
+// Ensure the jar is built when running the build task
+tasks.build.dependsOn tasks.shadowJar
