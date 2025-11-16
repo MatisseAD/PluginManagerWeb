@@ -27,6 +27,14 @@ dependencies {
     implementation 'io.javalin:javalin:5.6.2'
     // Logging API – SLF4J
     implementation 'org.slf4j:slf4j-simple:2.0.11'
+    // Database connection pooling
+    implementation 'com.zaxxer:HikariCP:5.0.1'
+    // SQLite JDBC driver
+    implementation 'org.xerial:sqlite-jdbc:3.43.0.0'
+    // JSON serialization
+    implementation 'com.google.code.gson:gson:2.10.1'
+    // HTTP client for GitHub API
+    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
 }
 
 java {
