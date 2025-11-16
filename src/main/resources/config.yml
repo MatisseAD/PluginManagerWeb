@@ -1,0 +1,28 @@
+pluginmanager:
+  enabled: true
+  web:
+    enabled: true
+    port: 8080
+    bind_address: 0.0.0.0
+    tls:
+      enabled: false
+      cert_path: cert.pem
+      key_path: key.pem
+    allowed_ips: [] # [] = any
+  auth:
+    # Jeton API initial à générer manuellement pour l'accès au tableau de bord
+    admin_token: "CHANGE_ME"
+    use_luckperms_groups: true
+  github:
+    # Token GitHub si nécessaire pour accéder aux releases privées
+    token: ""
+    # Référentiels à surveiller et gérer par défaut
+    repos:
+      - "MatisseAD/ReanimateMC"
+      - "MatisseAD/EvenMoreItems"
+      - "MatisseAD/CryptocurrencyMC"
+      - "MatisseAD/HammerMC"
+    auto_update: false
+  database:
+    type: sqlite
+    sqlite_path: data/pluginmanager.sqlite
